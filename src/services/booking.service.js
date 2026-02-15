@@ -45,7 +45,7 @@ export const create = async (bookingData, userId) => {
             ticketType: ticketTypeId,
             quantity,
             totalAmount,
-            status: 'PENDING'
+            status: 'CONFIRMED'
         }], { session });
 
         await session.commitTransaction();

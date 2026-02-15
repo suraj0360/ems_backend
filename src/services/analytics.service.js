@@ -4,21 +4,28 @@ import Booking from '../models/booking.model.js';
 
 export const getDashboardStats = async (userId, role) => {
     if (role === 'ADMIN') {
-        const [totalUsers, totalEvents, totalBookings, revenueData] = await Promise.all([
+        const [totalUsers, totalEvents, reportData] = await Promise.all([
             User.countDocuments(),
             Event.countDocuments(),
-            Booking.countDocuments(),
             Booking.aggregate([
                 { $match: { status: { $ne: 'CANCELLED' } } },
-                { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+                {
+                    $group: {
+                        _id: null,
+                        totalRevenue: { $sum: '$totalAmount' },
+                        totalBookings: { $sum: 1 } // Count of bookings
+                    }
+                }
             ])
         ]);
+
+        const stats = reportData[0] || { totalRevenue: 0, totalBookings: 0 };
 
         return {
             totalUsers,
             totalEvents,
-            totalBookings,
-            totalRevenue: revenueData[0]?.total || 0,
+            totalBookings: stats.totalBookings,
+            revenue: stats.totalRevenue, // Changed key to match
         };
     }
 
@@ -26,9 +33,8 @@ export const getDashboardStats = async (userId, role) => {
         const events = await Event.find({ organizer: userId }).select('_id');
         const eventIds = events.map(e => e._id);
 
-        const [myEvents, myBookings, revenueData] = await Promise.all([
+        const [myEvents, reportData] = await Promise.all([
             Event.countDocuments({ organizer: userId }),
-            Booking.countDocuments({ event: { $in: eventIds } }),
             Booking.aggregate([
                 {
                     $match: {
@@ -36,14 +42,22 @@ export const getDashboardStats = async (userId, role) => {
                         status: { $ne: 'CANCELLED' }
                     }
                 },
-                { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+                {
+                    $group: {
+                        _id: null,
+                        totalRevenue: { $sum: '$totalAmount' },
+                        totalTickets: { $sum: '$quantity' }
+                    }
+                }
             ])
         ]);
 
+        const stats = reportData[0] || { totalRevenue: 0, totalTickets: 0 };
+
         return {
             totalEvents: myEvents,
-            totalBookings: myBookings,
-            totalRevenue: revenueData[0]?.total || 0,
+            ticketsSold: stats.totalTickets,
+            revenue: stats.totalRevenue,
         };
     }
 
