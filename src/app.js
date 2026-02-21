@@ -16,6 +16,7 @@ import ticketRoutes from './routes/ticket.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
+import contactRoutes from './routes/contact.routes.js';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/contacts', contactRoutes);
 
 // Unhandled Routes
 app.all('*', (req, res, next) => {
