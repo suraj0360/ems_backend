@@ -1,6 +1,8 @@
 import Event from '../models/event.model.js';
 import AppError from '../utils/appError.js';
 import TicketType from '../models/ticketType.model.js';
+import User from '../models/user.model.js';
+import Notification from '../models/notification.model.js';
 
 export const create = async (eventData, userId) => {
     const event = await Event.create({
@@ -18,6 +20,23 @@ export const create = async (eventData, userId) => {
             quantity: event.totalTickets,
             event: event._id
         });
+    }
+
+    // Notify all admins about the new event
+    try {
+        const admins = await User.find({ role: 'ADMIN' });
+        const notifications = admins.map(admin => ({
+            recipient: admin._id,
+            message: `New event created: ${event.title}`,
+            type: 'EVENT_UPDATE',
+            link: '/admin/dashboard'
+        }));
+
+        if (notifications.length > 0) {
+            await Notification.insertMany(notifications);
+        }
+    } catch (error) {
+        console.error("Failed to notify admins of new event:", error);
     }
 
     return event;
@@ -45,7 +64,7 @@ export const findAll = async (query) => {
         Event.find(filter)
             .skip(skip)
             .limit(limit)
-            .sort({ date: 1 })
+            .sort({ createdAt: -1 })
             .populate('organizer', 'name email'),
         Event.countDocuments(filter),
     ]);

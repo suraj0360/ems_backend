@@ -1,4 +1,6 @@
 import Contact from '../models/contact.model.js';
+import User from '../models/user.model.js';
+import Notification from '../models/notification.model.js';
 import AppError from '../utils/appError.js';
 
 export const submitContact = async (req, res, next) => {
@@ -14,6 +16,19 @@ export const submitContact = async (req, res, next) => {
             email,
             message
         });
+
+        // Notify all admins
+        const admins = await User.find({ role: 'ADMIN' });
+        const notifications = admins.map(admin => ({
+            recipient: admin._id,
+            message: `New contact form message from ${name}`,
+            type: 'INFO',
+            link: '/admin/dashboard'
+        }));
+
+        if (notifications.length > 0) {
+            await Notification.insertMany(notifications);
+        }
 
         res.status(201).json({
             status: 'success',

@@ -2,6 +2,9 @@ import * as eventService from '../services/event.service.js';
 import catchAsync from '../utils/catchAsync.js';
 
 export const create = catchAsync(async (req, res) => {
+    if (req.file) {
+        req.body.image = req.file.path; // Cloudinary URL
+    }
     const event = await eventService.create(req.body, req.user._id);
     res.status(201).json(event);
 });
@@ -22,6 +25,9 @@ export const findOne = catchAsync(async (req, res) => {
 });
 
 export const update = catchAsync(async (req, res) => {
+    if (req.file) {
+        req.body.image = req.file.path; // Cloudinary URL
+    }
     const event = await eventService.update(req.params.id, req.body, req.user._id, req.user.role);
     res.status(200).json(event);
 });
