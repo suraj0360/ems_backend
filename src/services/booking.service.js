@@ -2,6 +2,7 @@ import Booking from '../models/booking.model.js';
 import TicketType from '../models/ticketType.model.js';
 import AppError from '../utils/appError.js';
 import mongoose from 'mongoose';
+import Notification from '../models/notification.model.js';
 
 export const create = async (bookingData, userId) => {
     const session = await mongoose.startSession();
@@ -49,6 +50,28 @@ export const create = async (bookingData, userId) => {
         }], { session });
 
         await session.commitTransaction();
+
+        // Create notification without transaction session so it can proceed independently
+        try {
+            await Notification.create({
+                recipient: userId,
+                message: `Successfully booked ${quantity} ticket(s) for ${event.title}`,
+                type: 'INFO',
+                link: '/user/dashboard'
+            });
+
+            if (event.organizer) {
+                await Notification.create({
+                    recipient: event.organizer,
+                    message: `New booking: ${quantity} ticket(s) booked for ${event.title}`,
+                    type: 'INFO',
+                    link: '/organizer/dashboard'
+                });
+            }
+        } catch (error) {
+            console.error("Failed to push notifications for booking:", error);
+        }
+
         return booking[0];
     } catch (error) {
         await session.abortTransaction();

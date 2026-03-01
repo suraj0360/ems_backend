@@ -5,6 +5,16 @@ import User from '../models/user.model.js';
 import Notification from '../models/notification.model.js';
 
 export const create = async (eventData, userId) => {
+    if (eventData.date) {
+        // Set both dates to midnight for fair comparison
+        const eventDate = new Date(eventData.date).setHours(0, 0, 0, 0);
+        const today = new Date().setHours(0, 0, 0, 0);
+
+        if (eventDate < today) {
+            throw new AppError('Event date cannot be in the past', 400);
+        }
+    }
+
     const event = await Event.create({
         ...eventData,
         organizer: userId,
