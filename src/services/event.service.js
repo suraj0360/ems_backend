@@ -102,8 +102,26 @@ export const update = async (id, updateData, userId, userRole) => {
         throw new AppError('You are not authorized to update this event', 403);
     }
 
+    const oldStatus = event.status;
     Object.assign(event, updateData);
+    const newStatus = event.status;
+
     await event.save();
+
+    // Trigger notification on status change (APPROVED or REJECTED)
+    if (oldStatus !== newStatus && ['APPROVED', 'REJECTED'].includes(newStatus)) {
+        try {
+            await Notification.create({
+                recipient: event.organizer,
+                message: `Your event "${event.title}" has been ${newStatus.toLowerCase()}.`,
+                type: 'EVENT_UPDATE',
+                link: `/organizer/dashboard`
+            });
+        } catch (error) {
+            console.error("Failed to trigger event status notification:", error);
+        }
+    }
+
     return event;
 };
 

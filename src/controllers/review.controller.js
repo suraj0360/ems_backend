@@ -26,7 +26,13 @@ export const createReview = catchAsync(async (req, res, next) => {
         return next(new AppError('You must book and attend this event before reviewing', 403));
     }
 
-    // 4. Create Review
+    // 4. Check if user has already reviewed this event
+    const existingReview = await Review.findOne({ user: userId, event: eventId });
+    if (existingReview) {
+        return next(new AppError('You have already submitted a review for this event', 400));
+    }
+
+    // 5. Create Review
     try {
         const review = await Review.create({
             user: userId,
