@@ -13,6 +13,17 @@ export const create = async (eventData, userId) => {
         if (eventDate < today) {
             throw new AppError('Event date cannot be in the past', 400);
         }
+
+        // Check for duplicates (same title, date, and organizer)
+        const existingEvent = await Event.findOne({
+            title: eventData.title,
+            date: new Date(eventData.date),
+            organizer: userId
+        });
+
+        if (existingEvent) {
+            throw new AppError('An event with this title and date already exists for you.', 400);
+        }
     }
 
     const event = await Event.create({
