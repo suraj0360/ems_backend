@@ -21,6 +21,7 @@ const eventSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    adminNote: { type: String, default: '' },
 }, { timestamps: true });
 
 const Event = mongoose.model('Event', eventSchema);

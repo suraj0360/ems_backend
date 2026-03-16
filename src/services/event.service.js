@@ -113,7 +113,22 @@ export const update = async (id, updateData, userId, userRole) => {
         throw new AppError('You are not authorized to update this event', 403);
     }
 
+    // Block updates to past events for non-admins
+    if (userRole !== 'ADMIN') {
+        const eventDate = new Date(event.date).setHours(0, 0, 0, 0);
+        const today = new Date().setHours(0, 0, 0, 0);
+        if (eventDate < today) {
+            throw new AppError('Cannot update events that have already occurred.', 400);
+        }
+    }
+
     const oldStatus = event.status;
+
+    // If organizer is updating an already APPROVED/REJECTED event, reset to PENDING for review
+    if (userRole === 'ORGANIZER' && ['APPROVED', 'REJECTED'].includes(oldStatus)) {
+        updateData.status = 'PENDING';
+    }
+
     Object.assign(event, updateData);
     const newStatus = event.status;
 
