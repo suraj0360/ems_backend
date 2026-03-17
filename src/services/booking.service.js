@@ -19,6 +19,13 @@ export const create = async (bookingData, userId) => {
         const event = await mongoose.model('Event').findById(eventId).session(session);
         if (!event) throw new AppError('Event not found', 404);
 
+        // Prevent booking expired events
+        const today = new Date().setHours(0, 0, 0, 0);
+        const eventDate = new Date(event.date).setHours(0, 0, 0, 0);
+        if (eventDate < today) {
+            throw new AppError('Cannot book tickets for events that have already occurred', 400);
+        }
+
         if (event.totalTickets > 0 && (event.soldTickets + quantity > event.totalTickets)) {
             throw new AppError('Event sold out or not enough tickets remaining', 400);
         }
