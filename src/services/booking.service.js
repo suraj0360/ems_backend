@@ -19,11 +19,19 @@ export const create = async (bookingData, userId) => {
         const event = await mongoose.model('Event').findById(eventId).session(session);
         if (!event) throw new AppError('Event not found', 404);
 
-        // Prevent booking expired events
-        const today = new Date().setHours(0, 0, 0, 0);
-        const eventDate = new Date(event.date).setHours(0, 0, 0, 0);
-        if (eventDate < today) {
-            throw new AppError('Cannot book tickets for events that have already occurred', 400);
+        // Prevent booking expired/started events
+        const now = new Date();
+        const eventDate = new Date(event.date);
+        
+        if (event.time) {
+            const [hours, minutes] = event.time.split(':').map(Number);
+            eventDate.setHours(hours || 0, minutes || 0, 0, 0);
+        } else {
+            eventDate.setHours(23, 59, 59, 999); // If no time, assume end of day
+        }
+
+        if (eventDate < now) {
+            throw new AppError('Cannot book tickets for events that have already started or occurred', 400);
         }
 
         if (event.totalTickets > 0 && (event.soldTickets + quantity > event.totalTickets)) {
@@ -53,7 +61,7 @@ export const create = async (bookingData, userId) => {
             ticketType: ticketTypeId,
             quantity,
             totalAmount,
-            status: 'CONFIRMED'
+            status: totalAmount === 0 ? 'CONFIRMED' : 'PENDING'
         }], { session });
 
         await session.commitTransaction();

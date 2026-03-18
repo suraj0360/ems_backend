@@ -22,6 +22,7 @@ const eventSchema = new mongoose.Schema({
         required: true
     },
     adminNote: { type: String, default: '' },
+    isDeleted: { type: Boolean, default: false }
 }, { timestamps: true });
 
 const Event = mongoose.model('Event', eventSchema);

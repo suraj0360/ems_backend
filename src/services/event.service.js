@@ -18,11 +18,24 @@ export const create = async (eventData, userId) => {
         const existingEvent = await Event.findOne({
             title: eventData.title,
             date: new Date(eventData.date),
-            organizer: userId
+            organizer: userId,
+            isDeleted: { $ne: true }
         });
 
         if (existingEvent) {
             throw new AppError('An event with this title and date already exists for you.', 400);
+        }
+
+        // New check: Duplicate event at same location and date
+        const existingAtLocation = await Event.findOne({
+            location: eventData.location,
+            date: new Date(eventData.date),
+            status: { $ne: 'REJECTED' },
+            isDeleted: { $ne: true }
+        });
+
+        if (existingAtLocation) {
+            throw new AppError('Another event is already scheduled at this location and date.', 400);
         }
     }
 
@@ -67,7 +80,7 @@ export const findAll = async (query) => {
     const { page = 1, limit = 10, search, category } = query;
     const skip = (page - 1) * limit;
 
-    const filter = {};
+    const filter = { isDeleted: { $ne: true } };
 
     if (search) {
         filter.$or = [
@@ -79,6 +92,14 @@ export const findAll = async (query) => {
 
     if (category) {
         filter.category = { $regex: category, $options: 'i' };
+    }
+
+    // Filter out past events if requested (default for Home page)
+    if (query.filterPast === 'true') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        filter.date = { $gte: today };
+        filter.status = 'APPROVED'; // Home page usually only shows approved events
     }
 
     const [events, total] = await Promise.all([
@@ -100,8 +121,8 @@ export const findAll = async (query) => {
 };
 
 export const findOne = async (id) => {
-    const event = await Event.findById(id).populate('organizer', 'name email');
-    if (!event) throw new AppError('Event not found', 404);
+    const event = await Event.findOne({ _id: id, isDeleted: { $ne: true } }).populate('organizer', 'name email');
+    if (!event) throw new AppError('Event not found or has been removed', 404);
     return event;
 };
 
@@ -159,7 +180,8 @@ export const remove = async (id, userId, userRole) => {
         throw new AppError('You are not authorized to delete this event', 403);
     }
 
-    await event.deleteOne();
+    event.isDeleted = true;
+    await event.save();
     return { success: true };
 };
 
